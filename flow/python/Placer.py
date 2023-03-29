@@ -128,6 +128,13 @@ class Placer(object):
         self.symAxis = int(self.symAxis - self.origin[0])
         self.readoutIoPins()
         self.writeoutPlacementResult()
+
+        # For generating dataset
+        self.writePlacePinFile()
+        placePinFileIdx = 0
+        while(os.path.exists(str(placePinFileIdx)+ ".placePin")):
+            plcePinFileIdx += 1
+        self.writePlacePinFile(str(placePinFileIdx)+ ".placePin")
     def readoutIoPins(self):
         self.iopinOffsetx =[]
         self.iopinOffsety = []
@@ -497,6 +504,21 @@ class Placer(object):
                     if self.debug:
                         outFile.write("-1\n")
 
+    def writePlacePinFile(self, fileName):
+        with open(fileName, 'w') as fn:
+            for nodeIdx in range(self.ckt.numNodes()):
+                cellIdx = self.nodeToCellIdx[nodeIdx]
+                node = self.ckt.node(nodeIdx)
+                cellName = node.name
+                fn.write("%s\n" % (cellName))
+                subCkt = self.dDB.subCkt(node.graphIdx)
+                x_offset = self.placer.xCellLoc(cellIdx) - self.origin[0]
+                y_offset = self.placer.yCellLoc(cellIdx) - self.origin[1]
+                for netIdx in range(subCkt.numNets()):
+                    net = subCkt.net(netIdx)
+                    shape = net.ioShape()
+                    layer = net.ioLayer
+                    fn.write("%s %d (%d %d) (%d %d)\n" %  (net.name, layer, x_offset + shape.xLo, x_offset + shape.yLo, y_offset + shape.xHi, y_offset + shape.yHi))
     def placeParsePin(self):
         """
         @brief parse pin and cell for placer
