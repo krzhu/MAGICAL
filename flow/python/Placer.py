@@ -506,19 +506,23 @@ class Placer(object):
 
     def writePlacePinFile(self, fileName):
         with open(fileName, 'w') as fn:
-            for nodeIdx in range(self.ckt.numNodes()):
+            for nodeIdx in range(self.numCkeNodes): # maybe shall use  self.ckt.numNodes()
                 cellIdx = self.nodeToCellIdx[nodeIdx]
                 node = self.ckt.node(nodeIdx)
                 cellName = node.name
                 fn.write("%s\n" % (cellName))
                 subCkt = self.dDB.subCkt(node.graphIdx)
-                x_offset = self.placer.xCellLoc(cellIdx) - self.origin[0]
-                y_offset = self.placer.yCellLoc(cellIdx) - self.origin[1]
-                for netIdx in range(subCkt.numNets()):
-                    net = subCkt.net(netIdx)
-                    shape = net.ioShape()
-                    layer = net.ioLayer
-                    fn.write("%s %d (%d %d) (%d %d)\n" %  (net.name, layer, x_offset + shape.xLo, x_offset + shape.yLo, y_offset + shape.xHi, y_offset + shape.yHi))
+                x_offset = node.offset().x
+                y_offset = node.offset().y
+                for pinInNodeIdx in range(node.numPins()):
+                    pin = node.pinIdx(pinInNodeIdx)
+                    internalNetIdx = pin.intNetIdx()
+                    subnet = subCkt.net(internalNetIdx)
+                    shape = subnet.ioShape()
+                    layer = subnet.ioLayer
+                    outNetIdx = pin.netIdx()
+                    outNet = self.ckt.net(outNetIdx)
+                    fn.write("%s %s %d (%d %d) (%d %d)\n" %  (outNet.name, subnet.name, layer, x_offset + shape.xLo, x_offset + shape.yLo, y_offset + shape.xHi, y_offset + shape.yHi))
     def placeParsePin(self):
         """
         @brief parse pin and cell for placer
